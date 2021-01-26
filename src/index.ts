@@ -9,9 +9,7 @@ const gifContainer = document.querySelector('#gifcontainer');
 
 const modelLoaded = () => {
   console.log('Model loaded....');
-  setInterval(() => {
-    renderGIF();
-  }, 3000);
+  setInterval(renderGIF, 5000);
 };
 
 const classifier = ml5.imageClassifier('MobileNet', modelLoaded);
@@ -27,7 +25,7 @@ const getRandomTag = () => {
 
 const getRandomGIF = async (): Promise<string> => {
   const randomTag = getRandomTag();
-  console.log('Selected tag: ', randomTag);
+  console.log('Actual keyword: ', randomTag);
   const params = new URLSearchParams({
     api_key: GIPHY_API_KEY,
     rating: 'G',
@@ -37,23 +35,27 @@ const getRandomGIF = async (): Promise<string> => {
 
   const response = await fetch(API_URL);
   const { data } = await response.json();
-  return data['image_mp4_url'];
+  return data['image_url'];
 };
 
-const classifyImage = (imageElement: HTMLVideoElement) => {
-  classifier.classify(imageElement, (err: Error, results: unknown) => {
+const classifyImage = (imageElement: HTMLImageElement) => {
+  classifier.classify(imageElement, (err: Error, results: Array<any>) => {
     if (err) throw err;
-    console.log(results);
+    results = results.map((tag) => tag?.label);
+    console.log('Predicted keywords: ', results);
   });
 };
 
 const renderGIF = async () => {
   try {
-    const videoElement = document.createElement('video');
-    videoElement.src = await getRandomGIF();
-    classifyImage(videoElement);
+    const imageElement = document.createElement('img');
+    imageElement.src = await getRandomGIF();
+    imageElement.crossOrigin = 'anonymous';
+    imageElement.addEventListener('load', () => {
+      classifyImage(imageElement);
+    });
     gifContainer.innerHTML = '';
-    gifContainer.appendChild(videoElement);
+    gifContainer.appendChild(imageElement);
   } catch (ex) {
     console.error(ex);
   }
