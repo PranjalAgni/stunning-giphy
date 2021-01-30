@@ -7,6 +7,11 @@ const BASE_API_URL = 'https://api.giphy.com/v1/gifs/random?';
 const TAGS = ['cars', 'apple', 'google', 'mountains', 'coffee', 'resort'];
 const gifContainer = document.querySelector('#gifcontainer');
 
+interface IGIPHY {
+  label: string;
+  confidence: number;
+}
+
 const modelLoaded = () => {
   console.log('Model loaded....');
   setInterval(renderGIF, 5000);
@@ -38,11 +43,15 @@ const getRandomGIF = async (): Promise<string> => {
   return data['image_url'];
 };
 
-const classifyImage = (imageElement: HTMLImageElement) => {
-  classifier.classify(imageElement, (err: Error, results: Array<any>) => {
-    if (err) throw err;
-    results = results.map((tag) => tag?.label);
-    console.log('Predicted keywords: ', results);
+const classifyImage = async (
+  imageElement: HTMLImageElement
+): Promise<string[]> => {
+  return new Promise((resolve, reject) => {
+    classifier.classify(imageElement, (err: Error, results: Array<IGIPHY>) => {
+      if (err) reject(err);
+      const tags = results.map((tag) => tag?.label);
+      resolve(tags);
+    });
   });
 };
 
@@ -51,8 +60,13 @@ const renderGIF = async () => {
     const imageElement = document.createElement('img');
     imageElement.src = await getRandomGIF();
     imageElement.crossOrigin = 'anonymous';
-    imageElement.addEventListener('load', () => {
-      classifyImage(imageElement);
+    imageElement.addEventListener('load', async () => {
+      try {
+        const results = await classifyImage(imageElement);
+        console.log('Predicted array: ', results);
+      } catch (ex) {
+        console.error(ex);
+      }
     });
     gifContainer.innerHTML = '';
     gifContainer.appendChild(imageElement);
