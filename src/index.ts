@@ -14,7 +14,7 @@ interface IGIPHY {
 
 const modelLoaded = () => {
   console.log('Model loaded....');
-  setInterval(renderGIF, 5000);
+  renderGIF();
 };
 
 const classifier = ml5.imageClassifier('MobileNet', modelLoaded);
@@ -28,13 +28,12 @@ const getRandomTag = () => {
   return faker.random.word();
 };
 
-const getRandomGIF = async (): Promise<string> => {
-  const randomTag = getRandomTag();
-  console.log('Actual keyword: ', randomTag);
+const getRandomGIF = async (tagName: string): Promise<string> => {
+  console.log('Actual keyword: ', tagName);
   const params = new URLSearchParams({
     api_key: GIPHY_API_KEY,
     rating: 'G',
-    tag: randomTag,
+    tag: tagName,
   });
   const API_URL = `${BASE_API_URL}${params}`;
 
@@ -55,15 +54,25 @@ const classifyImage = async (
   });
 };
 
-const renderGIF = async () => {
+const renderGIF = async (tagName = getRandomTag()) => {
   try {
     const imageElement = document.createElement('img');
-    imageElement.src = await getRandomGIF();
+    imageElement.src = await getRandomGIF(tagName);
     imageElement.crossOrigin = 'anonymous';
     imageElement.addEventListener('load', async () => {
       try {
-        const results = await classifyImage(imageElement);
-        console.log('Predicted array: ', results);
+        const tags = await classifyImage(imageElement);
+        console.log('Predicted array: ', tags);
+        const buttonContainer = document.querySelector('#buttoncontainer');
+        buttonContainer.innerHTML = '';
+        tags.forEach((tag) => {
+          const buttonElement = document.createElement('button');
+          buttonElement.innerHTML = tag;
+          buttonElement.addEventListener('click', async () => {
+            await renderGIF(tag);
+          });
+          buttonContainer.appendChild(buttonElement);
+        });
       } catch (ex) {
         console.error(ex);
       }
